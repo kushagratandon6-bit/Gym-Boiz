@@ -1,0 +1,1542 @@
+<!DOCTYPE html>
+<!--
+  SETUP (two short steps, no code editing needed):
+  1. Push this file as-is to your kushagratandon-hub.github.io repo.
+  2. Open the live page, paste your JSONBin Master Key (from jsonbin.io →
+     Account → API Keys) into the API Key box, hit Save. It creates its
+     own storage automatically.
+  3. Click "Download shared version" — this saves a copy of the file with
+     your key baked in. Push that file to your repo, replacing this one.
+  From then on, anyone who opens the link — your trainer included — gets
+  the full working dashboard immediately. No key box, nothing to paste.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Daily Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#ffffff;
+    --ink:#171a1f;
+    --muted:#6b7178;
+    --line:#e7e5e1;
+    --line-soft:#f1efeb;
+    --good:#2f6f4f;
+    --good-soft:#e7f2ec;
+    --warn:#b23a1e;
+    --warn-soft:#fbeae5;
+    --rest:#4a5aa8;
+    --rest-soft:#eceffb;
+    --card:#fafaf8;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .headline, .num, .tab, .score-num, .metric-label-lg{
+    font-family:'Oswald', system-ui, sans-serif;
+  }
+  .wrap{
+    max-width:640px;
+    margin:0 auto;
+    padding:20px 18px 80px;
+  }
+  header.top{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    padding-bottom:14px;
+    border-bottom:2px solid var(--ink);
+    margin-bottom:18px;
+  }
+  header.top h1{
+    font-size:20px;
+    letter-spacing:0.02em;
+    margin:0;
+    font-weight:600;
+    text-transform:uppercase;
+  }
+  header.top .sub{
+    font-size:12px;
+    color:var(--muted);
+    margin-top:2px;
+  }
+  .tabs{
+    display:flex;
+    gap:2px;
+    background:var(--line-soft);
+    border-radius:8px;
+    padding:3px;
+  }
+  .tab{
+    flex:1;
+    text-align:center;
+    padding:8px 14px;
+    font-size:13px;
+    font-weight:500;
+    letter-spacing:0.03em;
+    text-transform:uppercase;
+    border-radius:6px;
+    cursor:pointer;
+    color:var(--muted);
+    user-select:none;
+  }
+  .tab.active{
+    background:var(--ink);
+    color:#fff;
+  }
+
+  /* date nav */
+  .datebar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:18px;
+  }
+  .datebar button.navbtn{
+    width:34px;height:34px;
+    border:1px solid var(--line);
+    background:#fff;
+    border-radius:50%;
+    font-size:16px;
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    color:var(--ink);
+  }
+  .datebar button.navbtn:disabled{
+    opacity:0.3;
+    cursor:not-allowed;
+  }
+  .datebar .dateinfo{
+    text-align:center;
+    flex:1;
+  }
+  .datebar .dateinfo .dow{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--muted);
+  }
+  .datebar .dateinfo .dnum{
+    font-size:18px;
+    font-weight:600;
+    font-family:'Oswald',sans-serif;
+  }
+  .datebar input[type=date]{
+    border:none;
+    background:none;
+    font-family:inherit;
+    font-size:11px;
+    color:var(--muted);
+    text-align:center;
+  }
+  .datefilter{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:18px;
+    gap:10px;
+  }
+  .datefilter select{
+    flex:1;
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:8px 10px;
+    font-family:inherit;
+    font-size:12.5px;
+    color:var(--ink);
+    background:#fff;
+  }
+  .todaylink{
+    font-size:11.5px;
+    color:var(--rest);
+    text-decoration:underline;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+
+  /* score block */
+  .scorecard{
+    background:linear-gradient(135deg,#1b1f2b 0%,#232a45 55%,#2e2255 100%);
+    color:#fff;
+    border-radius:14px;
+    padding:20px 22px;
+    margin-bottom:22px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .scorecard .score-num{
+    font-size:44px;
+    font-weight:600;
+    line-height:1;
+  }
+  .scorecard .score-den{
+    font-size:18px;
+    color:#9aa0aa;
+    font-weight:500;
+  }
+  .scorecard .score-pct{
+    font-size:13px;
+    font-weight:600;
+    color:#7de3ad;
+    background:rgba(125,227,173,0.14);
+    padding:3px 9px;
+    border-radius:20px;
+    margin-left:9px;
+    font-family:'IBM Plex Sans',sans-serif;
+  }
+  .scorecard .score-label{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.1em;
+    color:#9aa0aa;
+    margin-top:4px;
+  }
+  .ticks{
+    display:flex;
+    gap:4px;
+  }
+  .ticks .tick{
+    width:8px;height:24px;
+    border-radius:2px;
+    background:#3a3e46;
+  }
+  .ticks .tick.on{
+    background:#7de3ad;
+  }
+
+  /* rows */
+  .row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:14px 0;
+    border-bottom:1px solid var(--line-soft);
+    gap:12px;
+  }
+  .row-left{
+    display:flex;
+    align-items:center;
+    gap:11px;
+    min-width:0;
+  }
+  .icon-badge{
+    width:36px;
+    height:36px;
+    min-width:36px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:17px;
+  }
+  .row .label{
+    font-size:14.5px;
+    font-weight:500;
+  }
+  .row .label .hint{
+    display:block;
+    font-size:11.5px;
+    color:var(--muted);
+    font-weight:400;
+    margin-top:1px;
+  }
+  .control{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    flex-shrink:0;
+  }
+  .numinput{
+    width:56px;
+    text-align:center;
+    font-size:14px;
+    font-weight:600;
+    font-family:'Oswald',sans-serif;
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:5px 2px;
+    color:var(--ink);
+    -moz-appearance:textfield;
+  }
+  .numinput::-webkit-outer-spin-button,
+  .numinput::-webkit-inner-spin-button{
+    -webkit-appearance:none;
+    margin:0;
+  }
+  .unit-lbl{
+    font-size:11px;
+    color:var(--muted);
+  }
+  .stepper .target{
+    font-size:10.5px;
+    color:var(--muted);
+    margin-left:4px;
+    white-space:nowrap;
+  }
+
+  /* YN buttons */
+  .seg{
+    display:flex;
+    border:1px solid var(--line);
+    border-radius:8px;
+    overflow:hidden;
+  }
+  .seg button{
+    border:none;
+    background:#fff;
+    padding:7px 13px;
+    font-size:12.5px;
+    font-weight:600;
+    cursor:pointer;
+    color:var(--muted);
+    border-right:1px solid var(--line);
+    font-family:'IBM Plex Sans',sans-serif;
+  }
+  .seg button:last-child{border-right:none;}
+  .seg button.on-y{background:var(--good); color:#fff;}
+  .seg button.on-n{background:var(--warn); color:#fff;}
+  .seg button.on-r{background:var(--rest); color:#fff;}
+
+  /* number stepper */
+  .stepper{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .stepper button{
+    width:28px;height:28px;
+    border-radius:50%;
+    border:1px solid var(--line);
+    background:#fff;
+    font-size:15px;
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    color:var(--ink);
+  }
+  .stepper .val{
+    min-width:64px;
+    text-align:center;
+    font-size:14px;
+    font-weight:600;
+    font-family:'Oswald',sans-serif;
+  }
+  .stepper .val .target{
+    font-size:11px;
+    color:var(--muted);
+    font-weight:400;
+    display:block;
+    font-family:'IBM Plex Sans',sans-serif;
+  }
+
+  .note-block{
+    margin-top:22px;
+  }
+  .note-block label{
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--muted);
+    font-weight:600;
+  }
+  .note-block textarea{
+    width:100%;
+    margin-top:8px;
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:10px 12px;
+    font-family:inherit;
+    font-size:13.5px;
+    resize:vertical;
+    min-height:64px;
+    color:var(--ink);
+  }
+  .note-block textarea::placeholder{color:#b6b6b6;}
+
+  .savebar{
+    margin-top:22px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .savebtn{
+    flex:1;
+    background:var(--ink);
+    color:#fff;
+    border:none;
+    padding:13px;
+    border-radius:10px;
+    font-size:14px;
+    font-weight:600;
+    letter-spacing:0.02em;
+    cursor:pointer;
+    font-family:'IBM Plex Sans',sans-serif;
+  }
+  .savebtn:active{transform:scale(0.98);}
+  .savestatus{
+    font-size:11.5px;
+    color:var(--muted);
+    min-width:90px;
+    text-align:right;
+  }
+  .savestatus.err{color:var(--warn);}
+  .savestatus.ok{color:var(--good);}
+
+  .banner{
+    font-size:12px;
+    background:var(--rest-soft);
+    color:var(--rest);
+    padding:10px 12px;
+    border-radius:8px;
+    margin-bottom:16px;
+  }
+
+  /* trends */
+  .stat-row{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:10px;
+    margin-bottom:20px;
+  }
+  .stat{
+    background:var(--card);
+    border:1px solid var(--line-soft);
+    border-radius:12px;
+    padding:14px 14px 12px;
+  }
+  .stat .stat-num{
+    font-size:24px;
+    font-weight:600;
+    font-family:'Oswald',sans-serif;
+  }
+  .stat .stat-label{
+    font-size:10.5px;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--muted);
+    margin-top:2px;
+  }
+
+  .section-title{
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--muted);
+    font-weight:600;
+    margin:26px 0 12px;
+  }
+
+  .chart{
+    display:flex;
+    align-items:flex-end;
+    gap:6px;
+    height:120px;
+    padding:0 2px;
+  }
+  .bar-col{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:6px;
+    height:100%;
+    justify-content:flex-end;
+  }
+  .bar{
+    width:100%;
+    max-width:22px;
+    border-radius:4px 4px 2px 2px;
+    background:var(--line);
+    min-height:3px;
+  }
+  .bar.good{background:var(--good);}
+  .bar.mid{background:var(--rest);}
+  .bar.low{background:var(--warn);}
+  .bar-col .bd{
+    font-size:9.5px;
+    color:var(--muted);
+  }
+
+  .habit-row{
+    margin-bottom:12px;
+  }
+  .habit-row .hr-top{
+    display:flex;
+    justify-content:space-between;
+    font-size:13px;
+    margin-bottom:5px;
+  }
+  .habit-row .hr-top .pct{
+    font-weight:600;
+    font-family:'Oswald',sans-serif;
+  }
+  .habit-bar{
+    height:7px;
+    background:var(--line-soft);
+    border-radius:4px;
+    overflow:hidden;
+  }
+  .habit-bar > div{
+    height:100%;
+    background:var(--good);
+    border-radius:4px;
+  }
+
+  .empty{
+    text-align:center;
+    color:var(--muted);
+    font-size:13px;
+    padding:40px 0;
+  }
+
+  .linechart{
+    width:100%;
+    height:auto;
+    display:block;
+  }
+  .linechart .lc-grid{ stroke:var(--line-soft); stroke-width:1; }
+  .linechart .lc-line{ fill:none; stroke:var(--good); stroke-width:2.5; }
+  .linechart .lc-line.weight{ stroke:var(--rest); }
+  .linechart .lc-goal{ stroke:var(--warn); stroke-width:1.5; stroke-dasharray:4 4; }
+  .linechart .lc-dot{ fill:var(--good); }
+  .linechart .lc-dot.weight{ fill:var(--rest); }
+  .linechart .lc-label{ font-size:9px; fill:var(--muted); font-family:'IBM Plex Sans',sans-serif; }
+
+  @keyframes popFloat{
+    0%{ transform:translate(-50%,0) scale(0.5); opacity:0; }
+    18%{ transform:translate(-50%,-8px) scale(1.25); opacity:1; }
+    100%{ transform:translate(-50%,-52px) scale(1); opacity:0; }
+  }
+  .pop-emoji{
+    position:fixed;
+    font-size:26px;
+    pointer-events:none;
+    z-index:999;
+    animation:popFloat 900ms ease-out forwards;
+  }
+  @keyframes confettiFall{
+    0%{ transform:translateY(-10px) rotate(0deg); opacity:1; }
+    100%{ transform:translateY(110vh) rotate(560deg); opacity:0; }
+  }
+  .confetti-piece{
+    position:fixed;
+    top:-10px;
+    width:8px;
+    height:14px;
+    pointer-events:none;
+    z-index:998;
+    animation-name:confettiFall;
+    animation-timing-function:ease-in;
+    animation-fill-mode:forwards;
+  }
+
+  /* inline api section */
+  .api-section{
+    margin-bottom:18px;
+  }
+  .api-form-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:var(--card);
+    border:1px solid var(--line-soft);
+    border-radius:10px;
+    padding:10px 12px;
+  }
+  .api-label{
+    font-size:12.5px;
+    font-weight:600;
+    white-space:nowrap;
+    flex-shrink:0;
+  }
+  .api-input{
+    flex:1;
+    min-width:0;
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:9px 10px;
+    font-family:inherit;
+    font-size:13px;
+    color:var(--ink);
+  }
+  .api-btn{
+    flex-shrink:0;
+    background:var(--ink);
+    color:#fff;
+    border:none;
+    padding:9px 16px;
+    border-radius:8px;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:'IBM Plex Sans',sans-serif;
+  }
+  .api-connected-row{
+    display:flex;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:6px 14px;
+    font-size:12.5px;
+    background:var(--good-soft);
+    color:var(--good);
+    border-radius:10px;
+    padding:9px 12px;
+    font-weight:600;
+  }
+  .api-connected-row .todaylink{
+    color:var(--good);
+    opacity:0.85;
+  }
+  .setup-status{
+    margin-top:8px;
+    font-size:12px;
+    color:var(--muted);
+    min-height:16px;
+  }
+  .setup-status.err{ color:var(--warn); }
+  .setup-status.ok{ color:var(--good); }
+
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#ffffff;
+      --ink:#171a1f;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="wrap" id="appContent">
+  <header class="top">
+    <div>
+      <h1>Daily Log</h1>
+      <div class="sub" id="orgNote">Kushagra &amp; trainer</div>
+    </div>
+    <div class="tabs">
+      <div class="tab active" data-tab="today">Today</div>
+      <div class="tab" data-tab="trends">Trends</div>
+    </div>
+  </header>
+
+  <div id="apiSection" class="api-section">
+    <div id="apiFormRow" class="api-form-row">
+      <span class="api-label">🔑 API Key</span>
+      <input type="text" id="apiKeyInput" class="api-input" placeholder="Paste your JSONBin API key here" autocomplete="off">
+      <button id="connectBtn" class="api-btn">Save</button>
+    </div>
+    <div id="apiConnectedRow" class="api-connected-row" style="display:none;">
+      <span>🔑 Connected</span>
+      <span id="downloadBakedBtn" class="todaylink">Download shared version</span>
+      <span id="shareLinkBtn" class="todaylink">Copy share link</span>
+      <span id="editConnection" class="todaylink">Change key</span>
+    </div>
+    <div id="setupStatus" class="setup-status"></div>
+  </div>
+
+  <div id="dbBanner" class="banner" style="display:none;"></div>
+
+  <div id="view-today">
+    <div class="datebar">
+      <button class="navbtn" id="prevDay">&#8249;</button>
+      <div class="dateinfo">
+        <div class="dow" id="dowLabel">TODAY</div>
+        <div class="dnum" id="dateLabel">—</div>
+        <input type="date" id="datePicker">
+      </div>
+      <button class="navbtn" id="nextDay">&#8250;</button>
+    </div>
+    <div class="datefilter">
+      <select id="dateDropdown"></select>
+      <span id="todayJump" class="todaylink">Jump to today</span>
+    </div>
+
+    <div class="scorecard">
+      <div>
+        <span class="score-num" id="scoreNum">0</span><span class="score-den">/11</span>
+        <span class="score-pct" id="scorePct">0%</span>
+        <div class="score-label" id="scoreTag">Not started</div>
+      </div>
+      <div class="ticks" id="ticks"></div>
+    </div>
+
+    <div id="rows"></div>
+
+    <div class="row" id="weightRow">
+      <div class="row-left">
+        <div class="icon-badge" style="background:#778ca322;">⚖️</div>
+        <div class="label">Weight<span class="hint" id="weightHint">No goal set</span></div>
+      </div>
+      <div class="control">
+        <div class="stepper" id="weightStepper"></div>
+      </div>
+    </div>
+    <div style="text-align:right;margin-top:-8px;margin-bottom:6px;">
+      <span id="setGoal" class="todaylink">Set goal weight</span>
+    </div>
+
+    <div class="note-block">
+      <label>Trainer / self note</label>
+      <textarea id="noteField" placeholder="Anything to flag for the day..."></textarea>
+    </div>
+
+    <div class="savebar">
+      <button class="savebtn" id="saveBtn">Save entry</button>
+      <div class="savestatus" id="saveStatus"></div>
+    </div>
+    <div style="text-align:right;margin-top:8px;">
+      <span id="syncNow" style="font-size:11.5px;color:var(--muted);text-decoration:underline;cursor:pointer;">Sync now</span>
+    </div>
+  </div>
+
+  <div id="view-trends" style="display:none;">
+    <div class="stat-row">
+      <div class="stat">
+        <div class="stat-num" id="streakStat">0</div>
+        <div class="stat-label">Day streak ≥8/11</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" id="avg7Stat">—</div>
+        <div class="stat-label">7-day avg %</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" id="avg30Stat">—</div>
+        <div class="stat-label">30-day avg %</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" id="weightStat">—</div>
+        <div class="stat-label" id="weightStatLabel">Weight</div>
+      </div>
+    </div>
+
+    <div class="section-title">Score trend (30 days)</div>
+    <div id="scoreLineChart"></div>
+
+    <div class="section-title">Last 14 days</div>
+    <div class="chart" id="chart"></div>
+
+    <div class="section-title">Weight trend (30 days)</div>
+    <div id="weightLineChart"></div>
+
+    <div class="section-title">Consistency by habit (last 30 days)</div>
+    <div id="habitList"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // Once you download the "shared" version (via the button after connecting),
+  // these two get filled in automatically — anyone who opens the page then
+  // uses this key straight away, no setup box, no separate entry needed.
+  var HARDCODED_BIN_ID = '6ab93d81ffd5d1605334d2b2';
+  var HARDCODED_API_KEY = '$2a$10$v/DZkIfvMb1usjDZMZASMOVfchiPbfPMSEwayZpCPYdRisbBYd1bW';
+
+  var LS_BIN = 'dailyLogBinId';
+  var LS_KEY = 'dailyLogApiKey';
+  var urlBin = new URLSearchParams(window.location.search).get('bin');
+  if(urlBin) localStorage.setItem(LS_BIN, urlBin);
+  var HARDCODED = !!(HARDCODED_BIN_ID && HARDCODED_API_KEY);
+  var JSONBIN_BIN_ID = HARDCODED_BIN_ID || localStorage.getItem(LS_BIN) || '';
+  var JSONBIN_API_KEY = HARDCODED_API_KEY || localStorage.getItem(LS_KEY) || '';
+  var CONFIGURED = !!(JSONBIN_BIN_ID && JSONBIN_API_KEY);
+  var JSONBIN_URL = 'https://api.jsonbin.io/v3/b/' + JSONBIN_BIN_ID;
+  var POLL_MS = 25000;
+
+  var METRICS = [
+    {key:'water', label:'Water', hint:'Target 4L', type:'water', target:4, icon:'💧', color:'#2E86DE'},
+    {key:'mealPics', label:'Meal pics sent', type:'yn', icon:'📸', color:'#F6B93B'},
+    {key:'d3b12', label:'D3 & B12', type:'yn', icon:'💊', color:'#F78FB3'},
+    {key:'electrolytes', label:'Electrolytes + salt water', type:'yn', icon:'⚡', color:'#F5CD19'},
+    {key:'steps', label:'Steps', hint:'Target 8,000', type:'steps', target:8000, icon:'🚶', color:'#20BF6B'},
+    {key:'training', label:'Training', type:'ynr', icon:'🏋️', color:'#EB3B5A'},
+    {key:'noDairy', label:'No dairy', type:'yn', icon:'🥛', color:'#4B7BEC'},
+    {key:'oil', label:'Oil < 0.5 spoon', type:'yn', icon:'🫒', color:'#FA8231'},
+    {key:'protein', label:'Protein in each meal', type:'yn', icon:'🥩', color:'#A55EEA'},
+    {key:'sleep', label:'Sleep', hint:'Target 7 hrs', type:'sleep', target:7, icon:'😴', color:'#45AAF2'},
+    {key:'gratitude', label:'Morning gratitude / meditation', type:'yn', icon:'🧘', color:'#26DE81'}
+  ];
+  var WEIGHT_ICON = '⚖️', WEIGHT_COLOR = '#778CA3';
+  var CONFETTI_COLORS = ['#F6B93B','#EB3B5A','#20BF6B','#4B7BEC','#A55EEA','#45AAF2','#F78FB3','#26DE81','#2E86DE','#FA8231'];
+
+  var state = {
+    selectedDate: todayStr(),
+    knownToday: todayStr(),
+    followToday: true,
+    entry: blankEntry(),
+    dirty: false,
+    history: [],
+    allEntries: {},
+    settings: {goalWeight: null},
+    loaded: false,
+    _lastScore: {}
+  };
+
+  function todayStr(){
+    var d = new Date();
+    return fmtDate(d);
+  }
+  function fmtDate(d){
+    var y=d.getFullYear(), m=('0'+(d.getMonth()+1)).slice(-2), day=('0'+d.getDate()).slice(-2);
+    return y+'-'+m+'-'+day;
+  }
+  function parseDate(s){
+    var parts = s.split('-');
+    return new Date(parseInt(parts[0],10), parseInt(parts[1],10)-1, parseInt(parts[2],10));
+  }
+  function addDays(dateStr, n){
+    var d = parseDate(dateStr);
+    d.setDate(d.getDate()+n);
+    return fmtDate(d);
+  }
+  function blankEntry(){
+    return {water:0, mealPics:'', d3b12:'', electrolytes:'', steps:0, training:'', noDairy:'', oil:'', protein:'', sleep:0, gratitude:'', weight:0, note:''};
+  }
+
+  function metricMet(m, entry){
+    var v = entry[m.key];
+    if(m.type==='yn') return v==='Y';
+    if(m.type==='ynr') return v==='Y' || v==='R';
+    if(m.type==='water') return (Number(v)||0) >= m.target;
+    if(m.type==='steps') return (Number(v)||0) >= m.target;
+    if(m.type==='sleep') return (Number(v)||0) >= m.target;
+    return false;
+  }
+  function computeScore(entry){
+    var n=0;
+    METRICS.forEach(function(m){ if(metricMet(m,entry)) n++; });
+    return n;
+  }
+
+  // ---------- celebrations ----------
+  function popEmojiAt(x, y, emoji){
+    var el = document.createElement('div');
+    el.className = 'pop-emoji';
+    el.style.left = x+'px';
+    el.style.top = y+'px';
+    el.textContent = emoji || '✨';
+    document.body.appendChild(el);
+    setTimeout(function(){ el.remove(); }, 950);
+  }
+  function popEmojiFromEl(triggerEl, emoji){
+    var rect = triggerEl.getBoundingClientRect();
+    popEmojiAt(rect.left + rect.width/2, rect.top, emoji);
+  }
+  function confettiBurst(){
+    var n = 30;
+    for(var i=0;i<n;i++){
+      (function(){
+        var el = document.createElement('div');
+        el.className = 'confetti-piece';
+        el.style.left = (Math.random()*100)+'vw';
+        el.style.background = CONFETTI_COLORS[Math.floor(Math.random()*CONFETTI_COLORS.length)];
+        el.style.borderRadius = Math.random()>0.5 ? '50%' : '2px';
+        var dur = 1700 + Math.random()*1300;
+        var delay = Math.random()*300;
+        el.style.animationDuration = dur+'ms';
+        el.style.animationDelay = delay+'ms';
+        document.body.appendChild(el);
+        setTimeout(function(){ el.remove(); }, dur+delay+150);
+      })();
+    }
+  }
+  function checkPerfectDay(prevScore, newScore){
+    if(newScore===11 && prevScore<11){
+      confettiBurst();
+    }
+    state._lastScore[state.selectedDate] = newScore;
+  }
+
+  // ---------- rendering: today rows ----------
+  var rowsEl = document.getElementById('rows');
+  function renderRows(){
+    rowsEl.innerHTML = '';
+    METRICS.forEach(function(m){
+      var row = document.createElement('div');
+      row.className = 'row';
+
+      var rowLeft = document.createElement('div');
+      rowLeft.className = 'row-left';
+      var badge = document.createElement('div');
+      badge.className = 'icon-badge';
+      badge.style.background = m.color + '22';
+      badge.textContent = m.icon;
+      var label = document.createElement('div');
+      label.className = 'label';
+      label.innerHTML = m.label + (m.hint ? '<span class="hint">'+m.hint+'</span>' : '');
+      rowLeft.appendChild(badge);
+      rowLeft.appendChild(label);
+      row.appendChild(rowLeft);
+
+      var control = document.createElement('div');
+      control.className = 'control';
+
+      if(m.type==='yn' || m.type==='ynr'){
+        var seg = document.createElement('div');
+        seg.className = 'seg';
+        var opts = m.type==='yn' ? ['Y','N'] : ['Y','N','R'];
+        opts.forEach(function(opt){
+          var b = document.createElement('button');
+          b.textContent = opt;
+          b.type = 'button';
+          if(state.entry[m.key]===opt) b.className = opt==='Y'?'on-y':(opt==='N'?'on-n':'on-r');
+          b.addEventListener('click', function(){
+            var prevScore = computeScore(state.entry);
+            var wasY = state.entry[m.key]==='Y';
+            state.entry[m.key] = (state.entry[m.key]===opt) ? '' : opt;
+            markDirty();
+            renderRows();
+            renderScore();
+            var newScore = computeScore(state.entry);
+            if(opt==='Y' && !wasY && state.entry[m.key]==='Y'){ popEmojiFromEl(b, m.icon); }
+            checkPerfectDay(prevScore, newScore);
+          });
+          seg.appendChild(b);
+        });
+        control.appendChild(seg);
+      } else {
+        // numeric: manual entry + steppers. water(0.25L), steps(500), sleep(0.5hr)
+        var step = m.type==='water' ? 0.25 : (m.type==='steps' ? 500 : 0.5);
+        var unit = m.type==='water' ? 'L' : (m.type==='steps' ? '' : 'hrs');
+        var stepper = document.createElement('div');
+        stepper.className = 'stepper';
+
+        function applyNumeric(newVal, triggerEl){
+          var prevScore = computeScore(state.entry);
+          var wasMet = metricMet(m, state.entry);
+          state.entry[m.key] = Math.max(0, round(newVal, m.type));
+          markDirty();
+          input.value = fmtVal(Number(state.entry[m.key]||0), m.type);
+          hint.textContent = '/ '+m.target+(m.type==='steps'?'':unit);
+          renderScore();
+          var newScore = computeScore(state.entry);
+          var nowMet = metricMet(m, state.entry);
+          if(!wasMet && nowMet && triggerEl) popEmojiFromEl(triggerEl, m.icon);
+          checkPerfectDay(prevScore, newScore);
+        }
+
+        var minus = document.createElement('button');
+        minus.textContent = '–';
+        minus.type='button';
+        minus.addEventListener('click', function(){
+          applyNumeric(Number(state.entry[m.key]||0) - step, minus);
+        });
+        var input = document.createElement('input');
+        input.type = 'number';
+        input.inputMode = 'decimal';
+        input.className = 'numinput';
+        input.step = step;
+        input.min = 0;
+        input.value = fmtVal(Number(state.entry[m.key]||0), m.type);
+        input.addEventListener('change', function(){
+          var num = parseFloat(input.value);
+          if(isNaN(num)) num = 0;
+          applyNumeric(num, input);
+        });
+        var hint = document.createElement('span');
+        hint.className = 'target';
+        hint.textContent = '/ '+m.target+(m.type==='steps'?'':unit);
+        var plus = document.createElement('button');
+        plus.textContent = '+';
+        plus.type='button';
+        plus.addEventListener('click', function(){
+          applyNumeric(Number(state.entry[m.key]||0) + step, plus);
+        });
+        stepper.appendChild(minus);
+        stepper.appendChild(input);
+        if(unit) { var unitLbl = document.createElement('span'); unitLbl.className='unit-lbl'; unitLbl.textContent=unit; stepper.appendChild(unitLbl); }
+        stepper.appendChild(plus);
+        stepper.appendChild(hint);
+        control.appendChild(stepper);
+      }
+      row.appendChild(control);
+      rowsEl.appendChild(row);
+    });
+  }
+  function round(v, type){
+    if(type==='steps') return Math.round(v);
+    return Math.round(v*4)/4;
+  }
+  function fmtVal(v, type){
+    if(type==='steps') return v.toLocaleString();
+    return (Math.round(v*100)/100).toString();
+  }
+
+  function renderScore(){
+    var score = computeScore(state.entry);
+    var pct = Math.round((score/11)*100);
+    document.getElementById('scoreNum').textContent = score;
+    document.getElementById('scorePct').textContent = pct + '%';
+    var tag = document.getElementById('scoreTag');
+    if(score>=11) tag.textContent = '🎉 Perfect day!';
+    else if(score>=10) tag.textContent = '🌟 Excellent day';
+    else if(score>=8) tag.textContent = '💪 Solid day';
+    else if(score>=5) tag.textContent = '🙂 Getting there';
+    else tag.textContent = '🌱 Let\u2019s go';
+    var ticks = document.getElementById('ticks');
+    ticks.innerHTML = '';
+    for(var i=0;i<11;i++){
+      var t = document.createElement('div');
+      t.className = 'tick' + (i<score?' on':'');
+      if(i<score) t.style.background = CONFETTI_COLORS[i % CONFETTI_COLORS.length];
+      ticks.appendChild(t);
+    }
+    renderWeightRow();
+  }
+
+  function renderWeightRow(){
+    var stepperEl = document.getElementById('weightStepper');
+    stepperEl.innerHTML = '';
+    var step = 0.1;
+    var minus = document.createElement('button');
+    minus.type='button'; minus.textContent='–';
+    minus.addEventListener('click', function(){
+      state.entry.weight = Math.max(0, Math.round((Number(state.entry.weight||0)-step)*10)/10);
+      markDirty(); renderScore();
+    });
+    var input = document.createElement('input');
+    input.type = 'number';
+    input.inputMode = 'decimal';
+    input.className = 'numinput';
+    input.step = step;
+    input.min = 0;
+    input.value = Number(state.entry.weight||0) || '';
+    input.addEventListener('change', function(){
+      var num = parseFloat(input.value);
+      if(isNaN(num)) num = 0;
+      var hadGoalHit = state.settings.goalWeight && state.entry.weight && Math.abs(state.entry.weight - state.settings.goalWeight) <= 0.15;
+      state.entry.weight = Math.max(0, Math.round(num*10)/10);
+      markDirty(); renderScore();
+      var nowGoalHit = state.settings.goalWeight && state.entry.weight && Math.abs(state.entry.weight - state.settings.goalWeight) <= 0.15;
+      if(!hadGoalHit && nowGoalHit) popEmojiFromEl(input, '🎯');
+    });
+    var plus = document.createElement('button');
+    plus.type='button'; plus.textContent='+';
+    plus.addEventListener('click', function(){
+      state.entry.weight = Math.round((Number(state.entry.weight||0)+step)*10)/10;
+      markDirty(); renderScore();
+    });
+    var unitLbl = document.createElement('span');
+    unitLbl.className = 'unit-lbl';
+    unitLbl.textContent = 'kg';
+    stepperEl.appendChild(minus);
+    stepperEl.appendChild(input);
+    stepperEl.appendChild(unitLbl);
+    stepperEl.appendChild(plus);
+
+    var hint = document.getElementById('weightHint');
+    if(state.settings.goalWeight){
+      hint.textContent = 'Goal ' + state.settings.goalWeight + ' kg';
+    } else {
+      hint.textContent = 'No goal set';
+    }
+  }
+
+  function renderDateBar(){
+    var d = parseDate(state.selectedDate);
+    var isToday = state.selectedDate === todayStr();
+    document.getElementById('dowLabel').textContent = isToday ? 'TODAY' : d.toLocaleDateString(undefined,{weekday:'long'}).toUpperCase();
+    document.getElementById('dateLabel').textContent = d.toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'});
+    document.getElementById('datePicker').value = state.selectedDate;
+    document.getElementById('datePicker').max = todayStr();
+    document.getElementById('nextDay').disabled = state.selectedDate >= todayStr();
+    document.getElementById('todayJump').style.display = isToday ? 'none' : 'inline';
+    populateDateDropdown();
+  }
+
+  function populateDateDropdown(){
+    var sel = document.getElementById('dateDropdown');
+    var dates = Object.keys(state.allEntries);
+    if(dates.indexOf(todayStr())===-1) dates.push(todayStr());
+    dates.sort(function(a,b){ return a<b?1:-1; });
+    var prevVal = sel.value;
+    sel.innerHTML = '';
+    dates.forEach(function(d){
+      var e = state.allEntries[d];
+      var pct = e ? Math.round((computeScore(e)/11)*100) : null;
+      var label = (d===todayStr()?'Today — ':'') + parseDate(d).toLocaleDateString(undefined,{day:'numeric',month:'short'}) + (pct!==null ? (' (' + pct + '%)') : ' (no entry)');
+      var opt = document.createElement('option');
+      opt.value = d;
+      opt.textContent = label;
+      sel.appendChild(opt);
+    });
+    sel.value = state.selectedDate;
+  }
+
+  function markDirty(){
+    state.dirty = true;
+    setSaveStatus('Unsaved changes', '');
+  }
+  function setSaveStatus(text, cls){
+    var el = document.getElementById('saveStatus');
+    el.textContent = text;
+    el.className = 'savestatus' + (cls?(' '+cls):'');
+  }
+
+  // ---------- jsonbin storage ----------
+  function showBanner(text){
+    var b = document.getElementById('dbBanner');
+    b.textContent = text;
+    b.style.display = 'block';
+  }
+
+  function fetchAll(){
+    if(!CONFIGURED) return Promise.resolve({entries:{}, settings:{}});
+    return fetch(JSONBIN_URL + '/latest', {
+      headers: { 'X-Master-Key': JSONBIN_API_KEY }
+    }).then(function(res){
+      if(!res.ok) throw new Error('fetch_failed_'+res.status);
+      return res.json();
+    }).then(function(json){
+      var rec = (json && json.record) || {};
+      return { entries: rec.entries || {}, settings: rec.settings || {} };
+    });
+  }
+
+  function pushAll(entries, settings){
+    return fetch(JSONBIN_URL, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_API_KEY },
+      body: JSON.stringify({ entries: entries, settings: settings })
+    }).then(function(res){
+      if(!res.ok) throw new Error('save_failed_'+res.status);
+      return res.json();
+    });
+  }
+
+  function saveSettings(){
+    if(!CONFIGURED) return;
+    fetchAll().then(function(data){
+      data.settings.goalWeight = state.settings.goalWeight;
+      return pushAll(data.entries, data.settings);
+    }).catch(function(){});
+  }
+
+  function loadCurrentDateFromCache(){
+    var data = state.allEntries[state.selectedDate];
+    if(state.dirty) return; // don't clobber local edits mid-typing
+    if(data){
+      state.entry = Object.assign(blankEntry(), data);
+      document.getElementById('noteField').value = data.note || '';
+    } else {
+      state.entry = blankEntry();
+      document.getElementById('noteField').value = '';
+    }
+    renderRows(); renderScore();
+  }
+
+  function refreshAll(showStatus){
+    if(!CONFIGURED){
+      showApiForm();
+      return Promise.resolve();
+    }
+    return fetchAll().then(function(data){
+      state.allEntries = data.entries;
+      state.settings = {goalWeight: data.settings.goalWeight || null};
+      state.history = Object.keys(data.entries).map(function(k){ return data.entries[k]; });
+      state.loaded = true;
+      loadCurrentDateFromCache();
+      renderDateBar();
+      renderTrends();
+      if(showStatus) setSaveStatus('Synced', 'ok');
+    }).catch(function(){
+      showBanner('Couldn\u2019t reach the shared log right now. Check your connection or bin settings.');
+    });
+  }
+
+  function saveEntry(){
+    if(!CONFIGURED){
+      setSaveStatus('Not configured yet', 'err');
+      return;
+    }
+    state.entry.note = document.getElementById('noteField').value;
+    state.entry.date = state.selectedDate;
+    state.entry.score = computeScore(state.entry);
+    state.entry.updatedAt = Date.now();
+    setSaveStatus('Saving…','');
+    fetchAll().then(function(data){
+      data.entries[state.selectedDate] = state.entry;
+      data.settings.goalWeight = state.settings.goalWeight;
+      return pushAll(data.entries, data.settings).then(function(){ return data; });
+    }).then(function(data){
+      state.allEntries = data.entries;
+      state.history = Object.keys(data.entries).map(function(k){ return data.entries[k]; });
+      state.dirty = false;
+      setSaveStatus('Saved', 'ok');
+      renderDateBar();
+      renderTrends();
+    }).catch(function(){
+      setSaveStatus('Couldn\u2019t save, try again', 'err');
+    });
+  }
+
+  function subscribeToDate(dateStr){
+    state.entry = blankEntry();
+    document.getElementById('noteField').value = '';
+    renderRows(); renderScore(); renderDateBar();
+    setSaveStatus('', '');
+    loadCurrentDateFromCache();
+  }
+
+  function renderTrends(){
+    var hist = state.history.slice().sort(function(a,b){ return a.date < b.date ? 1 : -1; });
+    var byDate = {};
+    hist.forEach(function(e){ byDate[e.date] = e; });
+
+    // streak: consecutive days ending today (or most recent) with score>=8
+    var streak = 0;
+    var cursor = todayStr();
+    while(true){
+      var e = byDate[cursor];
+      if(e && computeScore(e) >= 8){ streak++; cursor = addDays(cursor,-1); }
+      else break;
+    }
+    document.getElementById('streakStat').textContent = streak;
+
+    function avgPctOver(days){
+      var cutoff = addDays(todayStr(), -(days-1));
+      var vals = hist.filter(function(e){ return e.date >= cutoff; }).map(function(e){ return computeScore(e); });
+      if(!vals.length) return null;
+      var avg = vals.reduce(function(a,b){return a+b;},0) / vals.length;
+      return Math.round((avg/11)*100);
+    }
+    var a7 = avgPctOver(7), a30 = avgPctOver(30);
+    document.getElementById('avg7Stat').textContent = a7!==null ? (a7+'%') : '—';
+    document.getElementById('avg30Stat').textContent = a30!==null ? (a30+'%') : '—';
+
+    // weight stat: latest weight vs goal or 7-day-ago
+    var withWeight = hist.filter(function(e){ return e.weight; });
+    var weightStatEl = document.getElementById('weightStat');
+    var weightLabelEl = document.getElementById('weightStatLabel');
+    if(withWeight.length){
+      var latest = withWeight[0];
+      if(state.settings.goalWeight){
+        var diff = latest.weight - state.settings.goalWeight;
+        weightStatEl.textContent = latest.weight + 'kg';
+        weightLabelEl.textContent = (diff>0?'+':'') + diff.toFixed(1) + 'kg to goal';
+      } else {
+        weightStatEl.textContent = latest.weight + 'kg';
+        weightLabelEl.textContent = 'Latest weight';
+      }
+    } else {
+      weightStatEl.textContent = '—';
+      weightLabelEl.textContent = 'Weight';
+    }
+
+    // score line chart (30 days)
+    renderLineChart('scoreLineChart', 30, function(e){ return e ? Math.round((computeScore(e)/11)*100) : null; }, {max:100, suffix:'%', cls:''});
+
+    // bar chart: last 14 days
+    var chart = document.getElementById('chart');
+    chart.innerHTML = '';
+    for(var i=13;i>=0;i--){
+      var d = addDays(todayStr(), -i);
+      var e2 = byDate[d];
+      var score = e2 ? computeScore(e2) : 0;
+      var col = document.createElement('div');
+      col.className = 'bar-col';
+      var bar = document.createElement('div');
+      bar.className = 'bar ' + (e2 ? (score>=8?'good':(score>=5?'mid':'low')) : '');
+      var h = e2 ? Math.max(4, (score/11)*100) : 3;
+      bar.style.height = h+'%';
+      var lbl = document.createElement('div');
+      lbl.className = 'bd';
+      lbl.textContent = parseDate(d).getDate();
+      col.appendChild(bar);
+      col.appendChild(lbl);
+      chart.appendChild(col);
+    }
+
+    // weight line chart (30 days)
+    renderLineChart('weightLineChart', 30, function(e){ return e && e.weight ? e.weight : null; }, {cls:'weight', goal: state.settings.goalWeight, suffix:'kg'});
+
+    // habit consistency over last 30 days
+    var cutoff30 = addDays(todayStr(), -29);
+    var last30 = hist.filter(function(e){ return e.date >= cutoff30; });
+    var habitList = document.getElementById('habitList');
+    habitList.innerHTML = '';
+    if(!last30.length){
+      habitList.innerHTML = '<div class="empty">No entries yet this month</div>';
+      return;
+    }
+    METRICS.forEach(function(m){
+      var met = last30.filter(function(e){ return metricMet(m,e); }).length;
+      var pct = Math.round((met/last30.length)*100);
+      var row = document.createElement('div');
+      row.className = 'habit-row';
+      row.innerHTML = '<div class="hr-top"><span>'+m.label+'</span><span class="pct">'+pct+'%</span></div>'+
+        '<div class="habit-bar"><div style="width:'+pct+'%"></div></div>';
+      habitList.appendChild(row);
+    });
+  }
+
+  function renderLineChart(containerId, days, valueFn, opts){
+    opts = opts || {};
+    var el = document.getElementById(containerId);
+    var pts = [];
+    for(var i=days-1;i>=0;i--){
+      var d = addDays(todayStr(), -i);
+      var e = state.allEntries[d];
+      var v = valueFn(e);
+      pts.push({date:d, v:v});
+    }
+    var withVals = pts.filter(function(p){ return p.v!==null && p.v!==undefined; });
+    if(!withVals.length){
+      el.innerHTML = '<div class="empty">Not enough data yet</div>';
+      return;
+    }
+    var w = 600, h = 140, padL = 6, padR = 6, padT = 10, padB = 16;
+    var vals = withVals.map(function(p){ return p.v; });
+    var minV = opts.max ? 0 : Math.min.apply(null, vals);
+    var maxV = opts.max || Math.max.apply(null, vals);
+    if(opts.goal) maxV = Math.max(maxV, opts.goal);
+    if(opts.goal) minV = Math.min(minV, opts.goal);
+    if(minV===maxV){ minV -= 1; maxV += 1; }
+    var range = maxV - minV;
+    var stepX = (w - padL - padR) / (pts.length - 1);
+    function xFor(idx){ return padL + idx*stepX; }
+    function yFor(v){ return padT + (1 - (v-minV)/range) * (h - padT - padB); }
+
+    var pathPts = [];
+    var dots = '';
+    pts.forEach(function(p, idx){
+      if(p.v===null || p.v===undefined) return;
+      var x = xFor(idx), y = yFor(p.v);
+      pathPts.push((pathPts.length?'L':'M') + x.toFixed(1) + ',' + y.toFixed(1));
+      dots += '<circle class="lc-dot '+(opts.cls||'')+'" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="2.6"></circle>';
+    });
+
+    var gridLines = '';
+    for(var gl=0; gl<=2; gl++){
+      var gy = padT + (gl/2)*(h-padT-padB);
+      gridLines += '<line class="lc-grid" x1="'+padL+'" y1="'+gy.toFixed(1)+'" x2="'+(w-padR)+'" y2="'+gy.toFixed(1)+'"></line>';
+    }
+
+    var goalLine = '';
+    if(opts.goal){
+      var gy2 = yFor(opts.goal);
+      goalLine = '<line class="lc-goal" x1="'+padL+'" y1="'+gy2.toFixed(1)+'" x2="'+(w-padR)+'" y2="'+gy2.toFixed(1)+'"></line>' +
+        '<text class="lc-label" x="'+(w-padR)+'" y="'+(gy2-4).toFixed(1)+'" text-anchor="end">goal '+opts.goal+'</text>';
+    }
+
+    var firstLbl = parseDate(pts[0].date).toLocaleDateString(undefined,{day:'numeric',month:'short'});
+    var lastLbl = parseDate(pts[pts.length-1].date).toLocaleDateString(undefined,{day:'numeric',month:'short'});
+
+    el.innerHTML = '<svg class="linechart" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none">' +
+      gridLines +
+      goalLine +
+      '<path class="lc-line '+(opts.cls||'')+'" d="'+pathPts.join(' ')+'"></path>' +
+      dots +
+      '<text class="lc-label" x="'+padL+'" y="'+(h-2)+'">'+firstLbl+'</text>' +
+      '<text class="lc-label" x="'+(w-padR)+'" y="'+(h-2)+'" text-anchor="end">'+lastLbl+'</text>' +
+      '</svg>';
+  }
+
+  // ---------- wiring ----------
+  function goToDate(newDate, opts){
+    opts = opts || {};
+    if(newDate > todayStr()) newDate = todayStr();
+    if(state.dirty && !confirm('Discard unsaved changes?')){
+      renderDateBar();
+      return;
+    }
+    state.dirty = false;
+    state.selectedDate = newDate;
+    state.followToday = opts.follow !== undefined ? opts.follow : (newDate === todayStr());
+    subscribeToDate(state.selectedDate);
+  }
+  document.getElementById('prevDay').addEventListener('click', function(){
+    goToDate(addDays(state.selectedDate, -1), {follow:false});
+  });
+  document.getElementById('nextDay').addEventListener('click', function(){
+    if(state.selectedDate >= todayStr()) return;
+    goToDate(addDays(state.selectedDate, 1));
+  });
+  document.getElementById('datePicker').addEventListener('change', function(e){
+    var val = e.target.value;
+    if(!val) return;
+    goToDate(val);
+  });
+  document.getElementById('dateDropdown').addEventListener('change', function(e){
+    goToDate(e.target.value);
+  });
+  document.getElementById('todayJump').addEventListener('click', function(){
+    goToDate(todayStr(), {follow:true});
+  });
+  document.getElementById('setGoal').addEventListener('click', function(){
+    var current = state.settings.goalWeight || '';
+    var val = window.prompt('Goal weight (kg)', current);
+    if(val===null) return;
+    var num = parseFloat(val);
+    if(isNaN(num) || num<=0) return;
+    state.settings.goalWeight = Math.round(num*10)/10;
+    renderScore();
+    saveSettings();
+  });
+  document.getElementById('noteField').addEventListener('input', markDirty);
+  document.getElementById('saveBtn').addEventListener('click', saveEntry);
+  document.getElementById('syncNow').addEventListener('click', function(){ refreshAll(true); });
+
+  document.querySelectorAll('.tab').forEach(function(tab){
+    tab.addEventListener('click', function(){
+      document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
+      tab.classList.add('active');
+      var name = tab.getAttribute('data-tab');
+      document.getElementById('view-today').style.display = name==='today' ? '' : 'none';
+      document.getElementById('view-trends').style.display = name==='trends' ? '' : 'none';
+      if(name==='trends') renderTrends();
+    });
+  });
+
+  // ---------- inline api section ----------
+  function showApiForm(){
+    document.getElementById('apiFormRow').style.display = 'flex';
+    document.getElementById('apiConnectedRow').style.display = 'none';
+    document.getElementById('apiKeyInput').value = JSONBIN_API_KEY;
+  }
+  function showApiConnected(){
+    document.getElementById('apiFormRow').style.display = 'none';
+    document.getElementById('apiConnectedRow').style.display = 'flex';
+    setSetupStatus('', '');
+  }
+  function setSetupStatus(text, cls){
+    var el = document.getElementById('setupStatus');
+    el.textContent = text;
+    el.className = 'setup-status' + (cls ? (' '+cls) : '');
+  }
+  function testConnection(binId, apiKey){
+    return fetch('https://api.jsonbin.io/v3/b/'+binId+'/latest', {
+      headers: { 'X-Master-Key': apiKey }
+    }).then(function(res){
+      if(!res.ok) throw new Error('bad_credentials');
+      return res.json();
+    });
+  }
+  function createBin(apiKey){
+    return fetch('https://api.jsonbin.io/v3/b', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Master-Key': apiKey, 'X-Bin-Name': 'daily-log' },
+      body: JSON.stringify({ entries: {}, settings: {} })
+    }).then(function(res){
+      if(!res.ok) throw new Error('create_failed');
+      return res.json();
+    }).then(function(json){
+      return json.metadata && json.metadata.id;
+    });
+  }
+  function shareUrl(){
+    var u = new URL(window.location.href);
+    u.search = '';
+    u.searchParams.set('bin', JSONBIN_BIN_ID);
+    return u.toString();
+  }
+  document.getElementById('connectBtn').addEventListener('click', function(){
+    var apiKey = document.getElementById('apiKeyInput').value.trim();
+    if(!apiKey){ setSetupStatus('Paste your API key above', 'err'); return; }
+    setSetupStatus('Connecting…', '');
+    var existingBin = localStorage.getItem(LS_BIN);
+    var ready = existingBin ? testConnection(existingBin, apiKey).then(function(){ return existingBin; }) : createBin(apiKey);
+    ready.then(function(binId){
+      if(!binId) throw new Error('no_bin');
+      localStorage.setItem(LS_BIN, binId);
+      localStorage.setItem(LS_KEY, apiKey);
+      JSONBIN_BIN_ID = binId;
+      JSONBIN_API_KEY = apiKey;
+      JSONBIN_URL = 'https://api.jsonbin.io/v3/b/' + JSONBIN_BIN_ID;
+      CONFIGURED = true;
+      showApiConnected();
+      boot();
+    }).catch(function(){
+      setSetupStatus('Couldn\u2019t connect — check the key and try again', 'err');
+    });
+  });
+  document.getElementById('editConnection').addEventListener('click', function(){
+    showApiForm();
+  });
+  document.getElementById('shareLinkBtn').addEventListener('click', function(){
+    var url = shareUrl();
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(url).then(function(){
+        setSetupStatus('Link copied — send it to your trainer', 'ok');
+      }).catch(function(){ window.prompt('Copy this link:', url); });
+    } else {
+      window.prompt('Copy this link:', url);
+    }
+  });
+  document.getElementById('downloadBakedBtn').addEventListener('click', function(){
+    setSetupStatus('Preparing file…', '');
+    fetch(window.location.pathname).then(function(res){
+      if(!res.ok) throw new Error('fetch_failed');
+      return res.text();
+    }).then(function(text){
+      var out = text
+        .replace(/var HARDCODED_BIN_ID = '[^']*';/, "var HARDCODED_BIN_ID = '"+JSONBIN_BIN_ID+"';")
+        .replace(/var HARDCODED_API_KEY = '[^']*';/, "var HARDCODED_API_KEY = '"+JSONBIN_API_KEY+"';");
+      var blob = new Blob([out], {type:'text/html'});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'daily-log.html';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
+      setSetupStatus('Downloaded — push this file to your repo, replacing the old one', 'ok');
+    }).catch(function(){
+      setSetupStatus('Couldn\u2019t fetch this page\u2019s source. Try this from the live GitHub Pages URL (not a local file).', 'err');
+    });
+  });
+
+  // init
+  if(HARDCODED){
+    document.getElementById('apiSection').style.display = 'none';
+  } else if(CONFIGURED){
+    showApiConnected();
+  } else {
+    showApiForm();
+  }
+  renderRows();
+  renderScore();
+  renderDateBar();
+
+  var pollStarted = false;
+  function boot(){
+    if(!CONFIGURED){
+      showApiForm();
+      return;
+    }
+    showApiConnected();
+    refreshAll(false);
+    if(!pollStarted){
+      pollStarted = true;
+      setInterval(function(){
+        var t = todayStr();
+        if(t !== state.knownToday){
+          state.knownToday = t;
+          if(state.followToday){
+            state.selectedDate = t;
+            subscribeToDate(t);
+          } else {
+            renderDateBar(); // refresh dropdown options/labels even if not following
+          }
+        }
+      }, 60000);
+      setInterval(function(){
+        if(document.visibilityState === 'visible' && !state.dirty) refreshAll(false);
+      }, POLL_MS);
+    }
+  }
+  boot();
+})();
+</script>
+</body>
+</html>
